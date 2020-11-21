@@ -1,5 +1,6 @@
 module Pages.Top exposing (Model, Msg, Params, page)
 
+import Api
 import Color
 import Element exposing (..)
 import Element.Border as Border
@@ -10,29 +11,22 @@ import Json.Decode as D
 import Spa.Document exposing (Document)
 import Spa.Page as Page exposing (Page)
 import Spa.Url exposing (Url)
+import Todo
 
 
 type alias Params =
     ()
 
 
-type alias Todo =
-    { id : String
-    , description : String
-    , completed : Bool
-    }
-
-
 type alias Model =
     { description : String
-    , todos : List Todo
+    , todos : Api.Data (List Todo.Model)
     }
 
 
 type Msg
     = Edit String
-    | Create
-    | Loaded (Result Http.Error (List Todo))
+    | GotTodos (Api.Data (List Todo.Model))
 
 
 page : Page Params Model Msg
@@ -52,7 +46,7 @@ page =
 init : Url Params -> ( Model, Cmd Msg )
 init _ =
     ( { description = ""
-      , todos = []
+      , todos = Api.Loading
       }
     , load
     )
@@ -72,20 +66,12 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
-        Create ->
-            ( model, Cmd.none )
-
-        Loaded result ->
-            case result of
-                Ok data ->
-                    let
-                        newModel =
-                            { model | todos = data }
-                    in
-                    ( newModel, Cmd.none )
-
-                Err _ ->
-                    ( model, Cmd.none )
+        GotTodos data ->
+            let
+                newModel =
+                    { model | todos = data }
+            in
+            ( newModel, Cmd.none )
 
 
 
@@ -96,40 +82,38 @@ view : Model -> Document Msg
 view model =
     { title = "Todos"
     , body =
-        [ column [ padding 10, spacing 5, centerX, centerY ]
-            ([ Input.text
-                []
-                { label = Input.labelHidden "current"
-                , onChange = Edit
-                , placeholder = Just <| Input.placeholder [] (text "todo")
-                , text = model.description
-                }
-             ]
-                ++ List.map
-                    (\todo ->
-                        text todo.description
-                    )
-                    model.todos
-            )
+        [ column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
+            [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.white ] (text "Todo")
+            , Todo.creatorView model.description { onEdit = Edit }
+            , column [ spacing 2, Element.width fill ]
+                (apiTodoView model.todos)
+            ]
         ]
     }
 
 
+apiTodoView : Api.Data (List Todo.Model) -> List (Element Msg)
+apiTodoView todos =
+    case todos of
+        Api.NotAsked ->
+            []
 
--- CMD
+        Api.Loading ->
+            [ text "Loading..." ]
+
+        Api.SlowLoading ->
+            [ text "Loading..." ]
+
+        Api.Loaded result ->
+            List.map Todo.view result
+
+        Api.Failed error ->
+            [ text "Failed" ]
 
 
 load : Cmd Msg
 load =
     Http.get
         { url = "/api/todo"
-        , expect = Http.expectJson Loaded (D.list todoDecoder)
+        , expect = Api.expectJson GotTodos (D.list Todo.decoder)
         }
-
-
-todoDecoder : D.Decoder Todo
-todoDecoder =
-    D.map3 Todo
-        (D.field "id" D.string)
-        (D.field "description" D.string)
-        (D.field "completed" D.bool)

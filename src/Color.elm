@@ -8,6 +8,11 @@ grey =
     rgb255 210 210 210
 
 
+lightGrey : Color
+lightGrey =
+    rgb255 235 235 235
+
+
 white : Color
 white =
     rgb255 255 255 255
