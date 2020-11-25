@@ -4,8 +4,11 @@ import Color
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Input as Input
 import Json.Decode as D
+import Json.Encode as E
+import Keys
 
 
 type Completed
@@ -37,11 +40,39 @@ creatorView description msgs =
         }
 
 
-view : Model -> Element msg
-view model =
+view :
+    { onChange : Model -> String -> msg
+    , onIgnoreChange : Model -> msg
+    , onSubmitChange : Model -> String -> msg
+    }
+    -> Model
+    -> Element msg
+view msgs model =
     row [ spacing 10, padding 10, Border.solid, Border.width 1, Element.width fill, Border.rounded 2 ]
-        [ text model.description
-        , text <| completedAsString model.completed
+        [ case model.change of
+            Nothing ->
+                el
+                    [ Element.width fill
+                    , Element.height fill
+                    , Events.onDoubleClick (msgs.onChange model model.description)
+                    ]
+                    (text model.description)
+
+            Just change ->
+                Input.text
+                    [ Element.width fill
+                    , Element.height fill
+                    , Background.color Color.lightGrey
+                    , Keys.onKeyUp
+                        [ Keys.enter (msgs.onSubmitChange model change)
+                        , Keys.escape (msgs.onIgnoreChange model)
+                        ]
+                    ]
+                    { label = Input.labelHidden ""
+                    , onChange = msgs.onChange model
+                    , placeholder = Nothing
+                    , text = change
+                    }
         ]
 
 
@@ -63,6 +94,25 @@ completedFromBool bool =
 
         False ->
             ToBeDone
+
+
+completedToBool : Completed -> Bool
+completedToBool completed =
+    case completed of
+        Done ->
+            True
+
+        ToBeDone ->
+            False
+
+
+encoder : Model -> E.Value
+encoder model =
+    E.object
+        [ ( "id", E.string model.id )
+        , ( "description", E.string model.description )
+        , ( "completed", E.bool <| completedToBool model.completed )
+        ]
 
 
 decoder : D.Decoder Model

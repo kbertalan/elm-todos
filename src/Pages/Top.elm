@@ -21,12 +21,17 @@ type alias Params =
 type alias Model =
     { description : String
     , todos : Api.Data (List Todo.Model)
+    , updating : Maybe Todo.Model
     }
 
 
 type Msg
-    = Edit String
+    = Edited String
     | GotTodos (Api.Data (List Todo.Model))
+    | GotTodoEdit Todo.Model String
+    | GotTodoEditReset Todo.Model
+    | GotTodoChangeSubmitted Todo.Model String
+    | TodoUpdated (Api.Data Todo.Model)
 
 
 page : Page Params Model Msg
@@ -47,8 +52,9 @@ init : Url Params -> ( Model, Cmd Msg )
 init _ =
     ( { description = ""
       , todos = Api.Loading
+      , updating = Nothing
       }
-    , load
+    , loadTodos
     )
 
 
@@ -59,7 +65,7 @@ init _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Edit desc ->
+        Edited desc ->
             let
                 newModel =
                     { model | description = desc }
@@ -73,6 +79,79 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
+        GotTodoEdit todo change ->
+            let
+                newTodo =
+                    { todo | change = Just change }
+
+                newModel =
+                    { model | todos = replace newTodo model.todos }
+            in
+            ( newModel, Cmd.none )
+
+        GotTodoEditReset todo ->
+            let
+                newTodo =
+                    { todo | change = Nothing }
+
+                newModel =
+                    { model | todos = replace newTodo model.todos }
+            in
+            ( newModel, Cmd.none )
+
+        GotTodoChangeSubmitted todo change ->
+            let
+                newTodo =
+                    { todo | description = change, change = Nothing }
+
+                newModel =
+                    { model | todos = replace newTodo model.todos, updating = Just todo }
+            in
+            ( newModel, updateTodo newTodo )
+
+        TodoUpdated data ->
+            case data of
+                Api.NotAsked ->
+                    ( model, Cmd.none )
+
+                Api.Loading ->
+                    ( model, Cmd.none )
+
+                Api.SlowLoading ->
+                    ( model, Cmd.none )
+
+                Api.Loaded todo ->
+                    let
+                        newModel =
+                            { model | updating = Nothing }
+                    in
+                    ( newModel, loadTodos )
+
+                Api.Failed _ ->
+                    case model.updating of
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                        Just old ->
+                            let
+                                newModel =
+                                    { model | todos = replace old model.todos, updating = Nothing }
+                            in
+                            ( newModel, Cmd.none )
+
+
+replace : Todo.Model -> Api.Data (List Todo.Model) -> Api.Data (List Todo.Model)
+replace newTodo =
+    Api.map <|
+        List.map
+            (\todo ->
+                if todo.id == newTodo.id then
+                    newTodo
+
+                else
+                    todo
+            )
+
 
 
 -- VIEW
@@ -84,7 +163,7 @@ view model =
     , body =
         [ column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
             [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.white ] (text "Todo")
-            , Todo.creatorView model.description { onEdit = Edit }
+            , Todo.creatorView model.description { onEdit = Edited }
             , column [ spacing 2, Element.width fill ]
                 (apiTodoView model.todos)
             ]
@@ -105,15 +184,35 @@ apiTodoView todos =
             [ text "Loading..." ]
 
         Api.Loaded result ->
-            List.map Todo.view result
+            List.map
+                (Todo.view
+                    { onChange = GotTodoEdit
+                    , onIgnoreChange = GotTodoEditReset
+                    , onSubmitChange = GotTodoChangeSubmitted
+                    }
+                )
+                result
 
         Api.Failed error ->
             [ text "Failed" ]
 
 
-load : Cmd Msg
-load =
+loadTodos : Cmd Msg
+loadTodos =
     Http.get
         { url = "/api/todo"
         , expect = Api.expectJson GotTodos (D.list Todo.decoder)
+        }
+
+
+updateTodo : Todo.Model -> Cmd Msg
+updateTodo todo =
+    Http.request
+        { url = "/api/todo"
+        , method = "PUT"
+        , body = Http.jsonBody <| Todo.encoder todo
+        , expect = Api.expectJson TodoUpdated Todo.decoder
+        , headers = []
+        , timeout = Nothing
+        , tracker = Nothing
         }
