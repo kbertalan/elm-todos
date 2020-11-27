@@ -1,14 +1,17 @@
 module Todo exposing (..)
 
+import Browser.Dom
 import Color
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Input as Input
+import Html.Attributes
 import Json.Decode as D
 import Json.Encode as E
 import Keys
+import Task
 
 
 type Completed
@@ -32,7 +35,10 @@ creatorView :
     -> Element msg
 creatorView description msgs =
     Input.text
-        [ Element.width fill, Background.color Color.lightGrey ]
+        [ Element.width fill
+        , Background.color Color.lightGrey
+        , Input.focusedOnLoad
+        ]
         { label = Input.labelHidden "current"
         , onChange = msgs.onEdit
         , placeholder = Just <| Input.placeholder [] (text "Add new todo item here")
@@ -60,7 +66,8 @@ view msgs model =
 
             Just change ->
                 Input.text
-                    [ Element.width fill
+                    [ Element.htmlAttribute <| Html.Attributes.id model.id
+                    , Element.width fill
                     , Element.height fill
                     , Background.color Color.lightGrey
                     , Keys.onKeyUp
@@ -122,3 +129,8 @@ decoder =
         (D.field "description" D.string)
         (D.field "completed" <| D.map completedFromBool D.bool)
         (D.succeed Nothing)
+
+
+focus : msg -> Model -> Cmd msg
+focus msg model =
+    Task.attempt (\_ -> msg) <| Browser.Dom.focus model.id

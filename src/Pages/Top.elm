@@ -32,6 +32,7 @@ type Msg
     | GotTodoEditReset Todo.Model
     | GotTodoChangeSubmitted Todo.Model String
     | TodoUpdated (Api.Data Todo.Model)
+    | NoOp
 
 
 page : Page Params Model Msg
@@ -87,7 +88,7 @@ update msg model =
                 newModel =
                     { model | todos = replace newTodo model.todos }
             in
-            ( newModel, Cmd.none )
+            ( newModel, Todo.focus NoOp newTodo )
 
         GotTodoEditReset todo ->
             let
@@ -138,6 +139,9 @@ update msg model =
                                     { model | todos = replace old model.todos, updating = Nothing }
                             in
                             ( newModel, Cmd.none )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 replace : Todo.Model -> Api.Data (List Todo.Model) -> Api.Data (List Todo.Model)
