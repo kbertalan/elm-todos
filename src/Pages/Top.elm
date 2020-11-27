@@ -177,7 +177,7 @@ view model =
     { title = "Todos"
     , body =
         [ column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
-            [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.white ] (text "Todo")
+            [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.primary ] (text "Todo")
             , Todo.creatorView model.description { onEdit = Edited }
             , column [ spacing 2, Element.width fill ]
                 (apiTodoView model.todos)

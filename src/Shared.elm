@@ -74,8 +74,8 @@ view { page, toMsg } model =
         [ column
             [ width fill
             , height fill
-            , Background.color Color.grey
-            , Border.innerGlow Color.white 50
+            , Background.color Color.background
+            , Border.innerGlow (Color.scale 1.1 Color.background) 40
             ]
             page.body
         ]

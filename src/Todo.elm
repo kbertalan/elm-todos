@@ -6,6 +6,7 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
+import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes
 import Json.Decode as D
@@ -36,12 +37,23 @@ creatorView :
 creatorView description msgs =
     Input.text
         [ Element.width fill
-        , Background.color Color.lightGrey
+        , Background.color Color.background
         , Input.focusedOnLoad
+        , Font.color Color.primary
+        , Border.color Color.secondary
+        , Element.focused
+            [ Border.color Color.secondary
+            , Border.glow Color.secondary 2
+            ]
         ]
         { label = Input.labelHidden "current"
         , onChange = msgs.onEdit
-        , placeholder = Just <| Input.placeholder [] (text "Add new todo item here")
+        , placeholder =
+            Just <|
+                Input.placeholder
+                    [ Font.color Color.secondary
+                    ]
+                    (text "Add new todo item here")
         , text = description
         }
 
@@ -65,6 +77,8 @@ view msgs model =
                 , Element.width fill
                 , Border.rounded 2
                 , Events.onDoubleClick (msgs.onStartChange model)
+                , Font.color Color.secondary
+                , Border.color Color.secondary
                 ]
                 [ text model.description ]
 
@@ -73,7 +87,14 @@ view msgs model =
                 [ Element.htmlAttribute <| Html.Attributes.id model.id
                 , Element.width fill
                 , Element.height fill
-                , Background.color Color.lightGrey
+                , Background.color <| Color.scale 1.1 Color.background
+                , Border.color Color.secondary
+                , Border.glow Color.secondary 2
+                , Element.focused
+                    [ Border.color Color.secondary
+                    , Border.glow Color.secondary 2
+                    ]
+                , Font.color Color.primary
                 , Keys.onKeyUp
                     [ Keys.enter (msgs.onSubmitChange model change)
                     , Keys.escape (msgs.onIgnoreChange model)
