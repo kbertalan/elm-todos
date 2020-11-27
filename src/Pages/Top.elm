@@ -28,6 +28,7 @@ type alias Model =
 type Msg
     = Edited String
     | GotTodos (Api.Data (List Todo.Model))
+    | GotTodoSwitchedToEdit Todo.Model
     | GotTodoEdit Todo.Model String
     | GotTodoEditReset Todo.Model
     | GotTodoChangeSubmitted Todo.Model String
@@ -80,6 +81,16 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
+        GotTodoSwitchedToEdit todo ->
+            let
+                newTodo =
+                    { todo | change = Just todo.description }
+
+                newModel =
+                    { model | todos = replace newTodo model.todos }
+            in
+            ( newModel, Todo.focus NoOp newTodo )
+
         GotTodoEdit todo change ->
             let
                 newTodo =
@@ -88,7 +99,7 @@ update msg model =
                 newModel =
                     { model | todos = replace newTodo model.todos }
             in
-            ( newModel, Todo.focus NoOp newTodo )
+            ( newModel, Cmd.none )
 
         GotTodoEditReset todo ->
             let
@@ -190,7 +201,8 @@ apiTodoView todos =
         Api.Loaded result ->
             List.map
                 (Todo.view
-                    { onChange = GotTodoEdit
+                    { onStartChange = GotTodoSwitchedToEdit
+                    , onChange = GotTodoEdit
                     , onIgnoreChange = GotTodoEditReset
                     , onSubmitChange = GotTodoChangeSubmitted
                     }

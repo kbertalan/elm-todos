@@ -47,40 +47,43 @@ creatorView description msgs =
 
 
 view :
-    { onChange : Model -> String -> msg
+    { onStartChange : Model -> msg
+    , onChange : Model -> String -> msg
     , onIgnoreChange : Model -> msg
     , onSubmitChange : Model -> String -> msg
     }
     -> Model
     -> Element msg
 view msgs model =
-    row [ spacing 10, padding 10, Border.solid, Border.width 1, Element.width fill, Border.rounded 2 ]
-        [ case model.change of
-            Nothing ->
-                el
-                    [ Element.width fill
-                    , Element.height fill
-                    , Events.onDoubleClick (msgs.onChange model model.description)
-                    ]
-                    (text model.description)
+    case model.change of
+        Nothing ->
+            row
+                [ spacing 10
+                , padding 10
+                , Border.solid
+                , Border.width 1
+                , Element.width fill
+                , Border.rounded 2
+                , Events.onDoubleClick (msgs.onStartChange model)
+                ]
+                [ text model.description ]
 
-            Just change ->
-                Input.text
-                    [ Element.htmlAttribute <| Html.Attributes.id model.id
-                    , Element.width fill
-                    , Element.height fill
-                    , Background.color Color.lightGrey
-                    , Keys.onKeyUp
-                        [ Keys.enter (msgs.onSubmitChange model change)
-                        , Keys.escape (msgs.onIgnoreChange model)
-                        ]
+        Just change ->
+            Input.text
+                [ Element.htmlAttribute <| Html.Attributes.id model.id
+                , Element.width fill
+                , Element.height fill
+                , Background.color Color.lightGrey
+                , Keys.onKeyUp
+                    [ Keys.enter (msgs.onSubmitChange model change)
+                    , Keys.escape (msgs.onIgnoreChange model)
                     ]
-                    { label = Input.labelHidden ""
-                    , onChange = msgs.onChange model
-                    , placeholder = Nothing
-                    , text = change
-                    }
-        ]
+                ]
+                { label = Input.labelHidden ""
+                , onChange = msgs.onChange model
+                , placeholder = Nothing
+                , text = change
+                }
 
 
 completedAsString : Completed -> String
