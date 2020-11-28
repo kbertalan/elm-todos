@@ -2,6 +2,7 @@ module Pages.Top exposing (Model, Msg, Params, page)
 
 import Api
 import Color
+import Dict exposing (Dict)
 import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
@@ -22,7 +23,7 @@ type alias Params =
 
 type alias Model =
     { description : String
-    , todos : Api.Data (List Todo.Model)
+    , todos : Api.Data (Dict String Todo.Model)
     , updating : Maybe Todo.Model
     }
 
@@ -138,7 +139,7 @@ update msg model =
         GotTodos data ->
             let
                 newModel =
-                    { model | todos = data }
+                    { model | todos = Api.map (\list -> Dict.fromList <| List.map (\todo -> ( todo.id, todo )) list) data }
             in
             ( newModel, Cmd.none )
 
@@ -183,17 +184,9 @@ update msg model =
             ( newModel, updateTodo newTodo )
 
 
-replace : Todo.Model -> Api.Data (List Todo.Model) -> Api.Data (List Todo.Model)
+replace : Todo.Model -> Api.Data (Dict String Todo.Model) -> Api.Data (Dict String Todo.Model)
 replace newTodo =
-    Api.map <|
-        List.map
-            (\todo ->
-                if todo.id == newTodo.id then
-                    newTodo
-
-                else
-                    todo
-            )
+    Api.map <| Dict.insert newTodo.id newTodo
 
 
 
@@ -214,7 +207,7 @@ view model =
     }
 
 
-apiTodoView : Api.Data (List Todo.Model) -> List (Element Msg)
+apiTodoView : Api.Data (Dict String Todo.Model) -> List (Element Msg)
 apiTodoView todos =
     case todos of
         Api.NotAsked ->
@@ -245,7 +238,7 @@ apiTodoView todos =
                     , onSubmitChange = GotTodoChangeSubmitted
                     }
                 )
-                result
+                (List.sortBy (.description >> String.toLower) <| Dict.values result)
 
         Api.Failed error ->
             [ text "Failed" ]
