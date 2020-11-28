@@ -3,46 +3,29 @@ module Color exposing (..)
 import Element exposing (Color, fromRgb, rgb255, toRgb)
 
 
-grey : Color
-grey =
-    rgb255 210 210 210
-
-
-lightGrey : Color
-lightGrey =
-    rgb255 235 235 235
-
-
-white : Color
-white =
-    rgb255 255 255 255
-
-
-black : Color
-black =
-    rgb255 0 0 0
-
-
 background : Color
 background =
-    rgb255 249 237 105
-        |> scale 2
+    rgb255 39 39 39
 
 
 secondary : Color
 secondary =
-    rgb255 240 138 93
-        |> scale 0.5
+    rgb255 116 116 116
 
 
 primary : Color
 primary =
-    rgb255 184 59 94
+    rgb255 20 167 108
+
+
+highlight : Color
+highlight =
+    rgb255 255 228 0
 
 
 warning : Color
 warning =
-    rgb255 106 44 112
+    rgb255 255 101 47
 
 
 scale : Float -> Color -> Color

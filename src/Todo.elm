@@ -39,20 +39,19 @@ creatorView description msgs =
         [ Element.width fill
         , Background.color Color.background
         , Input.focusedOnLoad
-        , Font.color Color.primary
-        , Border.color Color.secondary
+        , Font.color Color.highlight
+        , Border.color Color.highlight
         , Element.focused
-            [ Border.color Color.secondary
-            , Border.glow Color.secondary 2
+            [ Border.color Color.highlight
+            , Border.glow Color.highlight 2
             ]
         ]
-        { label = Input.labelHidden "current"
+        { label = Input.labelHidden "new todo"
         , onChange = msgs.onEdit
         , placeholder =
             Just <|
                 Input.placeholder
-                    [ Font.color Color.secondary
-                    ]
+                    [ Font.color <| Color.scale 0.5 Color.highlight ]
                     (text "Add new todo item here")
         , text = description
         }
@@ -80,31 +79,70 @@ view msgs model =
                 , Font.color Color.secondary
                 , Border.color Color.secondary
                 ]
-                [ text model.description ]
+                [ el
+                    [ width fill
+                    ]
+                    (text model.description)
+                , el
+                    [ Element.alignRight
+                    , Element.pointer
+                    , Events.onClick (msgs.onStartChange model)
+                    , Font.color Color.primary
+                    ]
+                    (text "W")
+                ]
 
         Just change ->
-            Input.text
-                [ Element.htmlAttribute <| Html.Attributes.id model.id
+            row
+                [ padding 10
+                , spacing 10
                 , Element.width fill
-                , Element.height fill
-                , Background.color <| Color.scale 1.1 Color.background
+                , Background.color <| Color.scale 1.5 Color.background
+                , Border.solid
+                , Border.width 1
                 , Border.color Color.secondary
                 , Border.glow Color.secondary 2
                 , Element.focused
-                    [ Border.color Color.secondary
-                    , Border.glow Color.secondary 2
+                    [ Border.color Color.primary
+                    , Border.glow Color.primary 2
                     ]
                 , Font.color Color.primary
-                , Keys.onKeyUp
-                    [ Keys.enter (msgs.onSubmitChange model change)
-                    , Keys.escape (msgs.onIgnoreChange model)
-                    ]
                 ]
-                { label = Input.labelHidden ""
-                , onChange = msgs.onChange model
-                , placeholder = Nothing
-                , text = change
-                }
+                [ Input.text
+                    [ padding 0
+                    , Element.htmlAttribute <| Html.Attributes.id model.id
+                    , Background.color <| Color.scale 1.5 Color.background
+                    , Border.width 0
+                    , Border.glow Color.background 0
+                    , Border.rounded 0
+                    , Element.focused
+                        [ Border.glow Color.background 0
+                        ]
+                    , Keys.onKeyUp
+                        [ Keys.enter (msgs.onSubmitChange model change)
+                        , Keys.escape (msgs.onIgnoreChange model)
+                        ]
+                    ]
+                    { label = Input.labelHidden ""
+                    , onChange = msgs.onChange model
+                    , placeholder = Nothing
+                    , text = change
+                    }
+                , el
+                    [ Element.alignRight
+                    , Element.pointer
+                    , Events.onClick (msgs.onSubmitChange model change)
+                    , Font.color Color.primary
+                    ]
+                    (text "S")
+                , el
+                    [ Element.alignRight
+                    , Element.pointer
+                    , Events.onClick (msgs.onIgnoreChange model)
+                    , Font.color Color.warning
+                    ]
+                    (text "X")
+                ]
 
 
 completedAsString : Completed -> String
