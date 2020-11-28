@@ -32,6 +32,7 @@ creatorView :
     String
     ->
         { onEdit : String -> msg
+        , onSubmit : String -> msg
         }
     -> Element msg
 creatorView description msgs =
@@ -44,6 +45,9 @@ creatorView description msgs =
         , Element.focused
             [ Border.color Color.highlight
             , Border.glow Color.highlight 2
+            ]
+        , Keys.onKeyUp
+            [ Keys.enter (msgs.onSubmit description)
             ]
         ]
         { label = Input.labelHidden "new todo"

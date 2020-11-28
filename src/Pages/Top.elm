@@ -8,6 +8,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Http
 import Json.Decode as D
+import Json.Encode as E
 import Spa.Document exposing (Document)
 import Spa.Page as Page exposing (Page)
 import Spa.Url exposing (Url)
@@ -27,12 +28,14 @@ type alias Model =
 
 type Msg
     = Edited String
+    | Submitted String
+    | TodoUpdated (Api.Data Todo.Model)
+    | TodoSaved (Api.Data Todo.Model)
     | GotTodos (Api.Data (List Todo.Model))
     | GotTodoSwitchedToEdit Todo.Model
     | GotTodoEdit Todo.Model String
     | GotTodoEditReset Todo.Model
     | GotTodoChangeSubmitted Todo.Model String
-    | TodoUpdated (Api.Data Todo.Model)
     | NoOp
 
 
@@ -73,6 +76,63 @@ update msg model =
                     { model | description = desc }
             in
             ( newModel, Cmd.none )
+
+        Submitted desc ->
+            ( model, createTodo desc )
+
+        TodoUpdated data ->
+            case data of
+                Api.NotAsked ->
+                    ( model, Cmd.none )
+
+                Api.Loading ->
+                    ( model, Cmd.none )
+
+                Api.SlowLoading ->
+                    ( model, Cmd.none )
+
+                Api.Loaded todo ->
+                    let
+                        newModel =
+                            { model | updating = Nothing }
+                    in
+                    ( newModel, loadTodos )
+
+                Api.Failed _ ->
+                    case model.updating of
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                        Just old ->
+                            let
+                                newModel =
+                                    { model | todos = replace old model.todos, updating = Nothing }
+                            in
+                            ( newModel, Cmd.none )
+
+        TodoSaved data ->
+            case data of
+                Api.NotAsked ->
+                    ( model, Cmd.none )
+
+                Api.Loading ->
+                    ( model, Cmd.none )
+
+                Api.SlowLoading ->
+                    ( model, Cmd.none )
+
+                Api.Loaded todo ->
+                    let
+                        newModel =
+                            { model | description = "" }
+                    in
+                    ( newModel, loadTodos )
+
+                Api.Failed _ ->
+                    ( model, Cmd.none )
+
+        NoOp ->
+            ( model, Cmd.none )
 
         GotTodos data ->
             let
@@ -121,39 +181,6 @@ update msg model =
             in
             ( newModel, updateTodo newTodo )
 
-        TodoUpdated data ->
-            case data of
-                Api.NotAsked ->
-                    ( model, Cmd.none )
-
-                Api.Loading ->
-                    ( model, Cmd.none )
-
-                Api.SlowLoading ->
-                    ( model, Cmd.none )
-
-                Api.Loaded todo ->
-                    let
-                        newModel =
-                            { model | updating = Nothing }
-                    in
-                    ( newModel, loadTodos )
-
-                Api.Failed _ ->
-                    case model.updating of
-                        Nothing ->
-                            ( model, Cmd.none )
-
-                        Just old ->
-                            let
-                                newModel =
-                                    { model | todos = replace old model.todos, updating = Nothing }
-                            in
-                            ( newModel, Cmd.none )
-
-        NoOp ->
-            ( model, Cmd.none )
-
 
 replace : Todo.Model -> Api.Data (List Todo.Model) -> Api.Data (List Todo.Model)
 replace newTodo =
@@ -178,7 +205,7 @@ view model =
     , body =
         [ column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
             [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.primary ] (text "Todo")
-            , Todo.creatorView model.description { onEdit = Edited }
+            , Todo.creatorView model.description { onEdit = Edited, onSubmit = Submitted }
             , column [ spacing 4, Element.width fill ]
                 (apiTodoView model.todos)
             ]
@@ -231,4 +258,13 @@ updateTodo todo =
         , headers = []
         , timeout = Nothing
         , tracker = Nothing
+        }
+
+
+createTodo : String -> Cmd Msg
+createTodo description =
+    Http.post
+        { url = "/api/todo"
+        , body = Http.jsonBody <| E.object [ ( "description", E.string description ) ]
+        , expect = Api.expectJson TodoSaved Todo.decoder
         }
