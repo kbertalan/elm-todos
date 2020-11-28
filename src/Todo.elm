@@ -8,6 +8,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import FeatherIcons
 import Html.Attributes
 import Json.Decode as D
 import Json.Encode as E
@@ -93,7 +94,7 @@ view msgs model =
                     , Events.onClick (msgs.onStartChange model)
                     , Font.color Color.primary
                     ]
-                    (text "W")
+                    (FeatherIcons.edit |> FeatherIcons.toHtml [] |> html)
                 ]
 
         Just change ->
@@ -138,14 +139,14 @@ view msgs model =
                     , Events.onClick (msgs.onSubmitChange model change)
                     , Font.color Color.primary
                     ]
-                    (text "S")
+                    (FeatherIcons.save |> FeatherIcons.toHtml [] |> html)
                 , el
                     [ Element.alignRight
                     , Element.pointer
                     , Events.onClick (msgs.onIgnoreChange model)
                     , Font.color Color.warning
                     ]
-                    (text "X")
+                    (FeatherIcons.xSquare |> FeatherIcons.toHtml [] |> html)
                 ]
 
 

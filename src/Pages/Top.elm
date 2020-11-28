@@ -6,6 +6,7 @@ import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import FeatherIcons
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -220,7 +221,17 @@ apiTodoView todos =
             []
 
         Api.Loading ->
-            [ text "Loading..." ]
+            [ row
+                [ Font.color Color.warning
+                , centerX
+                , centerY
+                , spacing 10
+                , padding 10
+                ]
+                [ FeatherIcons.loader |> FeatherIcons.toHtml [] |> html
+                , text "Loading..."
+                ]
+            ]
 
         Api.SlowLoading ->
             [ text "Loading..." ]
