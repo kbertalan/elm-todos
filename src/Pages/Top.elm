@@ -251,7 +251,7 @@ loadTodos =
 updateTodo : Todo.Model -> Cmd Msg
 updateTodo todo =
     Http.request
-        { url = "/api/todo"
+        { url = "/api/todo/" ++ todo.id
         , method = "PUT"
         , body = Http.jsonBody <| Todo.encoder todo
         , expect = Api.expectJson TodoUpdated Todo.decoder
