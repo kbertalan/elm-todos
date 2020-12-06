@@ -1,20 +1,22 @@
-module Api exposing (Api(..), expectJson, map)
+module Api exposing (Api(..), delay, expectJson, loading, map, switch)
 
 import Http
 import Json.Decode exposing (Decoder)
+import Process
+import Task
 
 
 type Api a
     = NotAsked
-    | Loading
-    | SlowLoading
+    | Loading (Maybe a)
+    | SlowLoading (Maybe a)
     | Loaded a
-    | Failed Http.Error
+    | Failed Http.Error (Maybe a)
 
 
-expectJson : (Api a -> msg) -> Decoder a -> Http.Expect msg
-expectJson toMsg decoder =
-    Http.expectJson (fromResult >> toMsg) decoder
+expectJson : (Api a -> msg) -> Maybe a -> Decoder a -> Http.Expect msg
+expectJson toMsg prev decoder =
+    Http.expectJson (fromResult prev >> toMsg) decoder
 
 
 map : (a -> b) -> Api a -> Api b
@@ -23,24 +25,82 @@ map fn data =
         NotAsked ->
             NotAsked
 
-        Loading ->
-            Loading
+        Loading prev ->
+            Loading <| Maybe.map fn prev
 
-        SlowLoading ->
-            SlowLoading
+        SlowLoading prev ->
+            SlowLoading <| Maybe.map fn prev
 
         Loaded a ->
-            Loaded (fn a)
+            Loaded <| fn a
 
-        Failed e ->
-            Failed e
+        Failed e prev ->
+            Failed e <| Maybe.map fn prev
 
 
-fromResult : Result Http.Error a -> Api a
-fromResult result =
+delay : Float -> msg -> Cmd msg
+delay time msg =
+    Process.sleep time
+        |> Task.perform (\_ -> msg)
+
+
+switch : Api a -> Api a -> Api a
+switch current new =
+    case new of
+        NotAsked ->
+            new
+
+        Loading _ ->
+            new
+
+        SlowLoading _ ->
+            case current of
+                NotAsked ->
+                    new
+
+                Loading _ ->
+                    new
+
+                SlowLoading _ ->
+                    new
+
+                Loaded _ ->
+                    current
+
+                Failed _ _ ->
+                    current
+
+        Loaded _ ->
+            new
+
+        Failed _ _ ->
+            new
+
+
+loading : Api a -> Api a
+loading api =
+    case api of
+        NotAsked ->
+            Loading Nothing
+
+        Loading _ ->
+            api
+
+        SlowLoading _ ->
+            api
+
+        Loaded v ->
+            Loading <| Just v
+
+        Failed _ p ->
+            Loading p
+
+
+fromResult : Maybe a -> Result Http.Error a -> Api a
+fromResult prev result =
     case result of
         Ok value ->
             Loaded value
 
         Err error ->
-            Failed error
+            Failed error prev
