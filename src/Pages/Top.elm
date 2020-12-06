@@ -1,6 +1,6 @@
 module Pages.Top exposing (Model, Msg, Params, page)
 
-import Api
+import Api exposing (Api)
 import Color
 import Dict exposing (Dict)
 import Element exposing (..)
@@ -21,9 +21,13 @@ type alias Params =
     ()
 
 
+type alias Todos =
+    Api (Dict String (Api Todo.Model))
+
+
 type alias Model =
     { description : String
-    , todos : Api.Data (Dict String Todo.Model)
+    , todos : Todos
     , updating : Maybe Todo.Model
     }
 
@@ -31,9 +35,9 @@ type alias Model =
 type Msg
     = Edited String
     | Submitted String
-    | TodoUpdated (Api.Data Todo.Model)
-    | TodoSaved (Api.Data Todo.Model)
-    | GotTodos (Api.Data (List Todo.Model))
+    | TodoUpdated (Api Todo.Model)
+    | TodoSaved (Api Todo.Model)
+    | GotTodos (Api (List Todo.Model))
     | GotTodoSwitchedToEdit Todo.Model
     | GotTodoEdit Todo.Model String
     | GotTodoEditReset Todo.Model
@@ -138,8 +142,16 @@ update msg model =
 
         GotTodos data ->
             let
+                todoMapper =
+                    Api.map
+                        (\list ->
+                            list
+                                |> List.map (\todo -> ( todo.id, Api.Loaded todo ))
+                                |> Dict.fromList
+                        )
+
                 newModel =
-                    { model | todos = Api.map (\list -> Dict.fromList <| List.map (\todo -> ( todo.id, todo )) list) data }
+                    { model | todos = todoMapper data }
             in
             ( newModel, Cmd.none )
 
@@ -184,9 +196,11 @@ update msg model =
             ( newModel, updateTodo newTodo )
 
 
-replace : Todo.Model -> Api.Data (Dict String Todo.Model) -> Api.Data (Dict String Todo.Model)
+replace : Todo.Model -> Todos -> Todos
 replace newTodo =
-    Api.map <| Dict.insert newTodo.id newTodo
+    Api.Loaded newTodo
+        |> Dict.insert newTodo.id
+        |> Api.map
 
 
 
@@ -201,14 +215,14 @@ view model =
             [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.primary ] (text "Todo")
             , Todo.creatorView model.description { onEdit = Edited, onSubmit = Submitted }
             , column [ spacing 4, Element.width fill ]
-                (apiTodoView model.todos)
+                (apiTodosView model.todos)
             ]
         ]
     }
 
 
-apiTodoView : Api.Data (Dict String Todo.Model) -> List (Element Msg)
-apiTodoView todos =
+apiTodosView : Todos -> List (Element Msg)
+apiTodosView todos =
     case todos of
         Api.NotAsked ->
             []
@@ -230,18 +244,36 @@ apiTodoView todos =
             [ text "Loading..." ]
 
         Api.Loaded result ->
-            List.map
-                (Todo.view
-                    { onStartChange = GotTodoSwitchedToEdit
-                    , onChange = GotTodoEdit
-                    , onIgnoreChange = GotTodoEditReset
-                    , onSubmitChange = GotTodoChangeSubmitted
-                    }
-                )
-                (List.sortBy (.description >> String.toLower) <| Dict.values result)
+            Dict.values result
+                |> List.map apiTodoView
 
         Api.Failed error ->
             [ text "Failed" ]
+
+
+apiTodoView : Api Todo.Model -> Element Msg
+apiTodoView result =
+    case result of
+        Api.NotAsked ->
+            Element.none
+
+        Api.Loading ->
+            Element.none
+
+        Api.SlowLoading ->
+            Element.none
+
+        Api.Loaded data ->
+            Todo.view
+                { onStartChange = GotTodoSwitchedToEdit
+                , onChange = GotTodoEdit
+                , onIgnoreChange = GotTodoEditReset
+                , onSubmitChange = GotTodoChangeSubmitted
+                }
+                data
+
+        Api.Failed _ ->
+            Element.none
 
 
 loadTodos : Cmd Msg

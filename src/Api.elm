@@ -1,10 +1,10 @@
-module Api exposing (Data(..), expectJson, map)
+module Api exposing (Api(..), expectJson, map)
 
 import Http
 import Json.Decode exposing (Decoder)
 
 
-type Data a
+type Api a
     = NotAsked
     | Loading
     | SlowLoading
@@ -12,12 +12,12 @@ type Data a
     | Failed Http.Error
 
 
-expectJson : (Data a -> msg) -> Decoder a -> Http.Expect msg
+expectJson : (Api a -> msg) -> Decoder a -> Http.Expect msg
 expectJson toMsg decoder =
     Http.expectJson (fromResult >> toMsg) decoder
 
 
-map : (a -> b) -> Data a -> Data b
+map : (a -> b) -> Api a -> Api b
 map fn data =
     case data of
         NotAsked ->
@@ -36,7 +36,7 @@ map fn data =
             Failed e
 
 
-fromResult : Result Http.Error a -> Data a
+fromResult : Result Http.Error a -> Api a
 fromResult result =
     case result of
         Ok value ->
