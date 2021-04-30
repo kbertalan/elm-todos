@@ -36,11 +36,15 @@ type Msg
     | Submitted String
     | TodoUpdated (Api Todo.Model)
     | TodoSaved (Api Todo.Model)
+    | TodoDeleted (Api ())
     | GotTodos (Api (List Todo.Model))
     | GotTodoSwitchedToEdit Todo.Model
     | GotTodoEdit Todo.Model String
     | GotTodoEditReset Todo.Model
     | GotTodoChangeSubmitted Todo.Model String
+    | GotTodoDeleteTriggered Todo.Model
+    | GotTodoDeleteCancelled Todo.Model
+    | GotTodoDeleteConfirmed Todo.Model
     | NoOp
 
 
@@ -126,6 +130,23 @@ update msg model =
                 Api.Failed _ _ ->
                     ( model, Cmd.none )
 
+        TodoDeleted data ->
+            case data of
+                Api.NotAsked ->
+                    ( model, Cmd.none )
+
+                Api.Loading _ ->
+                    ( model, Cmd.none )
+
+                Api.SlowLoading _ ->
+                    ( model, Cmd.none )
+
+                Api.Loaded _ ->
+                    ( model, loadTodos )
+
+                Api.Failed _ _ ->
+                    ( model, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -147,7 +168,7 @@ update msg model =
         GotTodoSwitchedToEdit todo ->
             let
                 newTodo =
-                    { todo | change = Just todo.description }
+                    { todo | change = Todo.Content todo.description }
 
                 newModel =
                     { model | todos = replace Api.Loaded newTodo model.todos }
@@ -157,7 +178,7 @@ update msg model =
         GotTodoEdit todo change ->
             let
                 newTodo =
-                    { todo | change = Just change }
+                    { todo | change = Todo.Content change }
 
                 newModel =
                     { model | todos = replace Api.Loaded newTodo model.todos }
@@ -167,7 +188,7 @@ update msg model =
         GotTodoEditReset todo ->
             let
                 newTodo =
-                    { todo | change = Nothing }
+                    { todo | change = Todo.None }
 
                 newModel =
                     { model | todos = replace Api.Loaded newTodo model.todos }
@@ -177,12 +198,39 @@ update msg model =
         GotTodoChangeSubmitted todo change ->
             let
                 newTodo =
-                    { todo | description = change, change = Nothing }
+                    { todo | description = change, change = Todo.None }
 
                 newModel =
                     { model | todos = replace (Api.Loading << Just) todo model.todos }
             in
             ( newModel, updateTodo newTodo todo )
+
+        GotTodoDeleteTriggered todo ->
+            let
+                newTodo =
+                    { todo | change = Todo.DeleteTriggered }
+
+                newModel =
+                    { model | todos = replace Api.Loaded newTodo model.todos }
+            in
+            ( newModel, Cmd.none )
+
+        GotTodoDeleteCancelled todo ->
+            let
+                newTodo =
+                    { todo | change = Todo.None }
+
+                newModel =
+                    { model | todos = replace Api.Loaded newTodo model.todos }
+            in
+            ( newModel, Cmd.none )
+
+        GotTodoDeleteConfirmed todo ->
+            let
+                newModel =
+                    { model | todos = Api.map (Dict.remove todo.id) model.todos }
+            in
+            ( newModel, deleteTodo todo.id )
 
 
 replace : (Todo.Model -> Api Todo.Model) -> Todo.Model -> Todos -> Todos
@@ -263,6 +311,9 @@ apiTodoView result =
                 , onChange = GotTodoEdit
                 , onIgnoreChange = GotTodoEditReset
                 , onSubmitChange = GotTodoChangeSubmitted
+                , onDeleteTriggered = GotTodoDeleteTriggered
+                , onDeleteCancelled = GotTodoDeleteCancelled
+                , onDeleteConfirmed = GotTodoDeleteConfirmed
                 }
                 data
 
@@ -300,4 +351,17 @@ createTodo description =
         { url = "/api/todo"
         , body = Http.jsonBody <| E.object [ ( "description", E.string description ) ]
         , expect = Api.expectJson TodoSaved Nothing Todo.decoder
+        }
+
+
+deleteTodo : String -> Cmd Msg
+deleteTodo id =
+    Http.request
+        { url = "/api/todo/" ++ id
+        , method = "DELETE"
+        , body = Http.emptyBody
+        , expect = Api.expectWhatever TodoDeleted
+        , headers = []
+        , timeout = Nothing
+        , tracker = Nothing
         }

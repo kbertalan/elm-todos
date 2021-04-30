@@ -21,11 +21,17 @@ type Completed
     | ToBeDone
 
 
+type Change
+    = None
+    | Content String
+    | DeleteTriggered
+
+
 type alias Model =
     { id : String
     , description : String
     , completed : Completed
-    , change : Maybe String
+    , change : Change
     }
 
 
@@ -67,12 +73,15 @@ view :
     , onChange : Model -> String -> msg
     , onIgnoreChange : Model -> msg
     , onSubmitChange : Model -> String -> msg
+    , onDeleteTriggered : Model -> msg
+    , onDeleteCancelled : Model -> msg
+    , onDeleteConfirmed : Model -> msg
     }
     -> Model
     -> Element msg
 view msgs model =
     case model.change of
-        Nothing ->
+        None ->
             row
                 [ spacing 10
                 , padding 10
@@ -97,7 +106,7 @@ view msgs model =
                     (FeatherIcons.edit |> FeatherIcons.toHtml [] |> html)
                 ]
 
-        Just change ->
+        Content change ->
             row
                 [ padding 10
                 , spacing 10
@@ -143,8 +152,51 @@ view msgs model =
                 , el
                     [ Element.alignRight
                     , Element.pointer
-                    , Events.onClick (msgs.onIgnoreChange model)
+                    , Events.onClick (msgs.onDeleteTriggered model)
                     , Font.color Color.warning
+                    ]
+                    (FeatherIcons.trash |> FeatherIcons.toHtml [] |> html)
+                , el
+                    [ Element.alignRight
+                    , Element.pointer
+                    , Events.onClick (msgs.onIgnoreChange model)
+                    , Font.color Color.secondary
+                    ]
+                    (FeatherIcons.xSquare |> FeatherIcons.toHtml [] |> html)
+                ]
+
+        DeleteTriggered ->
+            row
+                [ padding 10
+                , spacing 10
+                , Element.width fill
+                , Background.color <| Color.scale 1.5 Color.background
+                , Border.solid
+                , Border.width 1
+                , Border.color Color.secondary
+                , Border.glow Color.secondary 2
+                , Element.focused
+                    [ Border.color Color.primary
+                    , Border.glow Color.primary 2
+                    ]
+                , Font.color Color.warning
+                ]
+                [ el
+                    [ Element.alignLeft
+                    , Element.pointer
+                    , Events.onClick (msgs.onDeleteConfirmed model)
+                    , Font.color Color.primary
+                    ]
+                    (FeatherIcons.checkSquare |> FeatherIcons.toHtml [] |> html)
+                , el
+                    [ width fill
+                    ]
+                    (text "Are you sure to delete this item?")
+                , el
+                    [ Element.alignRight
+                    , Element.pointer
+                    , Events.onClick (msgs.onDeleteCancelled model)
+                    , Font.color Color.secondary
                     ]
                     (FeatherIcons.xSquare |> FeatherIcons.toHtml [] |> html)
                 ]
@@ -195,7 +247,7 @@ decoder =
         (D.field "id" D.string)
         (D.field "description" D.string)
         (D.field "completed" <| D.map completedFromBool D.bool)
-        (D.succeed Nothing)
+        (D.succeed None)
 
 
 focus : msg -> Model -> Cmd msg

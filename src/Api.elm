@@ -1,4 +1,4 @@
-module Api exposing (Api(..), delay, expectJson, loading, map, switch)
+module Api exposing (Api(..), delay, expectJson, expectWhatever, loading, map, switch)
 
 import Http
 import Json.Decode exposing (Decoder)
@@ -17,6 +17,11 @@ type Api a
 expectJson : (Api a -> msg) -> Maybe a -> Decoder a -> Http.Expect msg
 expectJson toMsg prev decoder =
     Http.expectJson (fromResult prev >> toMsg) decoder
+
+
+expectWhatever : (Api () -> msg) -> Http.Expect msg
+expectWhatever toMsg =
+    Http.expectWhatever (fromResult Nothing >> toMsg)
 
 
 map : (a -> b) -> Api a -> Api b
