@@ -1,9 +1,10 @@
 module Pages.NotFound exposing (Model, Msg, Params, page)
 
 import Element exposing (..)
-import Spa.Document exposing (Document)
-import Spa.Page as Page exposing (Page)
-import Spa.Url exposing (Url)
+import Page as Page exposing (Page)
+import Request exposing (Request)
+import Shared
+import View exposing (View)
 
 
 type alias Params =
@@ -11,15 +12,15 @@ type alias Params =
 
 
 type alias Model =
-    Url Params
+    ()
 
 
 type alias Msg =
     Never
 
 
-page : Page Params Model Msg
-page =
+page : Shared.Model -> Request -> Page
+page shared req =
     Page.static
         { view = view
         }
@@ -29,10 +30,9 @@ page =
 -- VIEW
 
 
-view : Url Params -> Document Msg
-view { params } =
+view : View Msg
+view =
     { title = "404"
-    , body =
-        [ text "Page not found"
-        ]
+    , element =
+        text "Page not found"
     }

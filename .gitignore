@@ -1,8 +1,5 @@
-# Folders to ignore
+.DS_Store
+.elm-spa
 elm-stuff
 node_modules
-public/dist
-src/Spa/Generated
-
-# MacOS weird stuff
-.DS_Store
+dist

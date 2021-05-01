@@ -1,4 +1,4 @@
-module Pages.Top exposing (Model, Msg, Params, page)
+module Pages.Home_ exposing (Model, Msg, Params, page)
 
 import Api exposing (Api)
 import Color
@@ -11,10 +11,11 @@ import FeatherIcons
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import Spa.Document exposing (Document)
-import Spa.Page as Page exposing (Page)
-import Spa.Url exposing (Url)
+import Page
+import Request
+import Shared
 import Todo
+import View exposing (View)
 
 
 type alias Params =
@@ -48,10 +49,10 @@ type Msg
     | NoOp
 
 
-page : Page Params Model Msg
-page =
+page : Shared.Model -> Request.With Params -> Page.With Model Msg
+page shared req =
     Page.element
-        { init = init
+        { init = init req
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
@@ -62,7 +63,7 @@ page =
 -- INIT
 
 
-init : Url Params -> ( Model, Cmd Msg )
+init : Request.With Params -> ( Model, Cmd Msg )
 init _ =
     ( { description = ""
       , todos = Api.Loading Nothing
@@ -244,17 +245,16 @@ replace api newTodo =
 -- VIEW
 
 
-view : Model -> Document Msg
+view : Model -> View Msg
 view model =
     { title = "Todos"
-    , body =
-        [ column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
+    , element =
+        column [ padding 10, spacing 5, centerX, Element.width (px 400) ] <|
             [ el [ Font.center, Element.width fill, Font.size 80, Font.color Color.primary ] (text "Todo")
             , Todo.creatorView model.description { onEdit = Edited, onSubmit = Submitted }
             , column [ spacing 4, Element.width fill ]
                 (apiTodosView model.todos)
             ]
-        ]
     }
 
 
